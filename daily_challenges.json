@@ -1,0 +1,204 @@
+{
+  "challenges": [
+    {
+      "id": 1,
+      "text": {
+        "en": "Burn 500 kcal today!",
+        "ro": "Arde 500 kcal azi!"
+      },
+      "type": "calories",
+      "value": 500,
+      "progressive": true
+    },
+    {
+      "id": 2,
+      "text": {
+        "en": "Complete 3 workouts this week!",
+        "ro": "Fă 3 antrenamente săptămâna aceasta!"
+      },
+      "type": "workouts",
+      "value": 3,
+      "progressive": true
+    },
+    {
+      "id": 3,
+      "text": {
+        "en": "Drink 2 liters of water today!",
+        "ro": "Bea 2 litri de apă azi!"
+      },
+      "type": "hydration",
+      "value": 2000,
+      "progressive": true
+    },
+    {
+      "id": 4,
+      "text": {
+        "en": "Keep your heart rate below 140 BPM today!",
+        "ro": "Menține pulsul sub 140 BPM azi!"
+      },
+      "type": "heart_rate",
+      "value": 140,
+      "progressive": false
+    },
+    {
+      "id": 5,
+      "text": {
+        "en": "Burn 1000 kcal in 3 days!",
+        "ro": "Arde 1000 kcal în 3 zile!"
+      },
+      "type": "calories",
+      "value": 1000,
+      "progressive": true
+    },
+    {
+      "id": 6,
+      "text": {
+        "en": "Complete a Hard level workout!",
+        "ro": "Finalizează un antrenament de nivel Intens!"
+      },
+      "type": "plan_name",
+      "value": "Hard",
+      "progressive": false
+    },
+    {
+      "id": 7,
+      "text": {
+        "en": "Maintain a 5-day workout streak!",
+        "ro": "Menține o serie de 5 zile consecutive!"
+      },
+      "type": "streak",
+      "value": 5,
+      "progressive": true
+    },
+    {
+      "id": 8,
+      "text": {
+        "en": "Take a rest day after training 6 days in a row!",
+        "ro": "Ia o zi de pauză după 6 zile consecutive de antrenament!"
+      },
+      "type": "rest",
+      "value": 6,
+      "progressive": false
+    },
+    {
+      "id": 9,
+      "text": {
+        "en": "Burn 200 kcal before noon!",
+        "ro": "Arde 200 kcal înainte de prânz!"
+      },
+      "type": "calories",
+      "value": 200,
+      "progressive": false
+    },
+    {
+      "id": 10,
+      "text": {
+        "en": "Do 2 workouts in a single day!",
+        "ro": "Fă 2 antrenamente într-o singură zi!"
+      },
+      "type": "workouts",
+      "value": 2,
+      "progressive": false
+    },
+    {
+      "id": 11,
+      "text": {
+        "en": "Drink at least 1.5L of water today!",
+        "ro": "Bea cel puțin 1.5L de apă azi!"
+      },
+      "type": "hydration",
+      "value": 1500,
+      "progressive": true
+    },
+    {
+      "id": 12,
+      "text": {
+        "en": "Do 10 workouts this month!",
+        "ro": "Fă 10 antrenamente luna aceasta!"
+      },
+      "type": "workouts",
+      "value": 10,
+      "progressive": true
+    },
+    {
+      "id": 13,
+      "text": {
+        "en": "Burn 300 kcal after 6PM!",
+        "ro": "Arde 300 kcal după ora 18:00!"
+      },
+      "type": "calories",
+      "value": 300,
+      "progressive": false
+    },
+    {
+      "id": 14,
+      "text": {
+        "en": "Finish a Medium level workout!",
+        "ro": "Finalizează un antrenament de nivel Mediu!"
+      },
+      "type": "plan_name",
+      "value": "Medium",
+      "progressive": false
+    },
+    {
+      "id": 15,
+      "text": {
+        "en": "Maintain a streak of 3 hydration days!",
+        "ro": "Menține o serie de 3 zile cu hidratare bună!"
+      },
+      "type": "hydration",
+      "value": 3,
+      "progressive": true
+    },
+    {
+      "id": 16,
+      "text": {
+        "en": "Take 2 rest days this week!",
+        "ro": "Ia 2 zile de pauză săptămâna asta!"
+      },
+      "type": "rest",
+      "value": 2,
+      "progressive": true
+    },
+    {
+      "id": 17,
+      "text": {
+        "en": "Stay under 130 BPM today!",
+        "ro": "Menține pulsul sub 130 BPM azi!"
+      },
+      "type": "heart_rate",
+      "value": 130,
+      "progressive": false
+    },
+    {
+      "id": 18,
+      "text": {
+        "en": "Burn 700 kcal before dinner!",
+        "ro": "Arde 700 kcal înainte de cină!"
+      },
+      "type": "calories",
+      "value": 700,
+      "progressive": false
+    },
+    {
+      "id": 19,
+      "text": {
+        "en": "Complete an Easy level workout!",
+        "ro": "Finalizează un antrenament de nivel Ușor!"
+      },
+      "type": "plan_name",
+      "value": "Easy",
+      "progressive": false
+    },
+    {
+      "id": 20,
+      "text": {
+        "en": "Stay consistent: log in 7 days in a row!",
+        "ro": "Fii consecvent: intră în aplicație 7 zile la rând!"
+      },
+      "type": "streak",
+      "value": 7,
+      "progressive": true
+    }
+  ]
+}
