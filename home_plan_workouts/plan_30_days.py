@@ -79,7 +79,7 @@ class Plan30Days(ctk.CTkFrame):
 
         progress_label = ctk.CTkLabel(
             self,
-            text=f"📊 Progress: {progress_percent}% - {remaining_days} Days Left",
+            text=f"Progress: {progress_percent}% - {remaining_days} Days Left",
             font=ctk.CTkFont(size=16),
             text_color=self.colors["text"]
         )

@@ -15,7 +15,6 @@ from app_statistics import StatisticsPage
 from bson import ObjectId
 from challenges import ChallengesPage
 
-# 🎨 Funcție pentru culori dinamice
 def get_theme_colors():
     mode = ctk.get_appearance_mode()
     if mode == "Dark":
@@ -86,6 +85,7 @@ class HomeApp(ctk.CTk):
         self.apply_theme_to_navbar()
         self.show_home()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+        
     def create_nav_buttons(self):
         self.home_button = ctk.CTkButton(self.bottom_nav_frame, image=self.create_tinted_icon(self.home_icon),
                                          text=t("key_38"), compound="top", command=self.show_home, fg_color="transparent")
@@ -112,7 +112,7 @@ class HomeApp(ctk.CTk):
                     self.profile_button, self.challenges_button]:
             btn.configure(text_color=colors["nav_text"])
         self.theme_switch.configure(
-            text="Dark Mode" if ctk.get_appearance_mode() == "Dark" else "Light Mode",
+            text=t("key_167") if ctk.get_appearance_mode() == "Dark" else t("key_168"),
             text_color=colors["nav_text"]
         )
 
@@ -197,6 +197,7 @@ class HomeApp(ctk.CTk):
         self.current_page = "profile"
         self.clear_content()
         ProfilePage(self.content_frame, self).pack(fill="both", expand=True)
+        #self.main_app.update_language_ui()
 
     def show_challenges(self):
         self.current_page = "challenges"
@@ -210,7 +211,8 @@ class HomeApp(ctk.CTk):
         self.clear_content()
         if user_data is None:
             user_data = self.current_data
-        EditProfilePage(self.content_frame, self, user_data).pack(fill="both", expand=True)
+        self.edit_profile_page = EditProfilePage(self.content_frame, self, user_data)
+        self.edit_profile_page.pack(fill="both", expand=True)
 
     def show_reminders_page(self):
         self.clear_content()
@@ -239,6 +241,14 @@ class HomeApp(ctk.CTk):
             except Exception as e:
                 print(f"Error while updating user: {e}")
         return False
+    
+    def user_exists(self, username):
+        return self.collection.find_one({"username": username}) is not None
+
+    def update_language_ui(self):
+        self.update_navbar_language()
+        self.apply_theme_to_navbar()
+
 
     def on_close(self):
         if self.client:
@@ -263,6 +273,13 @@ class HomeApp(ctk.CTk):
             "height_cm": user.get("height_cm", ""),
             "weight_kg": user.get("weight_kg", "")
         }
+    
+    def show_plan_30_days(self, plan_name):
+        from home_plan_workouts.plan_30_days import Plan30Days
+        self.current_page = "home_plan"
+        self.clear_content()
+        Plan30Days(self.content_frame, self, plan_name).pack(fill="both", expand=True)
+
 
 class HomePage(ctk.CTkFrame):
     def __init__(self, parent, main_app):
@@ -298,11 +315,11 @@ class HomePage(ctk.CTkFrame):
         card = ctk.CTkFrame(parent, fg_color=colors["card"], corner_radius=10)
         card.pack(pady=(10, 5), padx=20, fill="x")
 
-        medal_icon = "🥇" if plan["color"] == "gold" else "🥈" if plan["color"] == "silver" else "🥉"
+        #medal_icon = "🥇" if plan["color"] == "gold" else "🥈" if plan["color"] == "silver" else "🥉"
 
         title_label = ctk.CTkLabel(
             card,
-            text=f"{medal_icon} {plan['title']}",
+            text=f"{plan['title']}",
             font=ctk.CTkFont(size=14),
             text_color=colors["text"]
         )
@@ -324,6 +341,8 @@ class HomePage(ctk.CTkFrame):
             text_color="white"
         )
         view_button.pack(pady=(10, 5), anchor="e")
+
+    
 
 if __name__ == "__main__":
     from login import LoginApp

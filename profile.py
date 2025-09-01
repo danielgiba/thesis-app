@@ -42,7 +42,6 @@ class ProfilePage(ctk.CTkFrame):
         self.db = self.client["testapp"]
         self.collection = self.db["users"]
 
-        # 🔹 Icons
         self.edit_profile_icon = Image.open("icons/edit_profile.png").convert("RGBA")
         self.reminders_icon = Image.open("icons/reminders.png").convert("RGBA")
         self.sound_icon = Image.open("icons/sound.png").convert("RGBA")
@@ -50,18 +49,15 @@ class ProfilePage(ctk.CTkFrame):
         self.logout_icon = Image.open("icons/logout.png").convert("RGBA")
         self.delete_icon = Image.open("icons/delete-account.png").convert("RGBA")
 
-        # 🔹 Titlu pagină
         profile_label = ctk.CTkLabel(self, text=t("key_102"), font=ctk.CTkFont(size=24, weight="bold"), text_color=self.colors["text"])
         profile_label.pack(pady=20)
 
-        # 🔘 Butoane funcționale
         self.edit_profile_button = self.create_button(t("key_103"), self.edit_profile, self.edit_profile_icon)
         self.reminders_button = self.create_button(t("key_104"), self.open_reminders, self.reminders_icon)
         self.sound_button = self.create_button(t("key_105"), self.open_sound_settings, self.sound_icon)
         self.feedback_button = self.create_button(t("key_106"), self.open_feedback, self.feedback_icon)
         self.logout_button = self.create_button(t("key_107"), self.logout, self.logout_icon)
 
-        # 🔴 Ștergere cont
         self.delete_account_button = ctk.CTkButton(
             self,
             text=t("key_108"),
@@ -75,7 +71,6 @@ class ProfilePage(ctk.CTkFrame):
         )
         self.delete_account_button.pack(pady=(5, 10), anchor="center")
 
-        # 🔻 Dropdown limba
         ctk.CTkLabel(self, text=t("key_112"), text_color=self.colors["text"]).pack(pady=(10, 5), anchor="center")
         self.language_dropdown = ctk.CTkComboBox(
             self,
@@ -90,6 +85,7 @@ class ProfilePage(ctk.CTkFrame):
         self.language_dropdown.pack(pady=(0, 20), anchor="center")
 
         self.main_app.update_navbar_language()
+        self.main_app.update_language_ui()
 
 
     def create_button(self, text, command, icon):

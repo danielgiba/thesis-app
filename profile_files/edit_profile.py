@@ -59,31 +59,31 @@ class EditProfilePage(ctk.CTkFrame):
         )
         save_button.pack(side="right", padx=(0, 20))
 
-        search_frame = ctk.CTkFrame(self, fg_color=self.colors["bg"])
-        search_frame.pack(fill="x", pady=(10, 10), padx=20)
+        # search_frame = ctk.CTkFrame(self, fg_color=self.colors["bg"])
+        # search_frame.pack(fill="x", pady=(10, 10), padx=20)
 
-        search_label = ctk.CTkLabel(search_frame, text=t("key_133"), text_color=self.colors["text"])
-        search_label.pack(side="left", padx=(0, 10))
+        # search_label = ctk.CTkLabel(search_frame, text=t("key_133"), text_color=self.colors["text"])
+        # search_label.pack(side="left", padx=(0, 10))
 
-        self.search_var = StringVar()
-        search_entry = ctk.CTkEntry(search_frame, textvariable=self.search_var, fg_color=self.colors["entry_bg"], text_color=self.colors["text"])
-        search_entry.pack(side="left", fill="x", expand=True)
+        # self.search_var = StringVar()
+        # search_entry = ctk.CTkEntry(search_frame, textvariable=self.search_var, fg_color=self.colors["entry_bg"], text_color=self.colors["text"])
+        # search_entry.pack(side="left", fill="x", expand=True)
 
-        search_button = ctk.CTkButton(
-            search_frame,
-            text=t("key_134"),
-            fg_color=self.colors["accent"],
-            text_color="white",
-            command=self.search_user
-        )
-        search_button.pack(side="left", padx=(10, 0))
+        # search_button = ctk.CTkButton(
+        #     search_frame,
+        #     text=t("key_134"),
+        #     fg_color=self.colors["accent"],
+        #     text_color="white",
+        #     command=self.search_user
+        # )
+        # search_button.pack(side="left", padx=(10, 0))
 
         fields = [
             (t("key_143"), "name"),
             (t("key_144"), "username"),
             (t("key_145"), "gender", [t("key_126"), t("key_127")]),
             (t("key_146"), "birthday"),
-            (t("key_147"), "goal", [t("key_130"), t("key_131")]),
+            (t("key_147"), "goal", [t("key_130"), t("key_131"), t("key_132")]),
             (t("key_148"), "height_cm"),
             (t("key_149"), "weight_kg")
         ]

@@ -134,7 +134,7 @@
       "id": 14,
       "text": {
         "en": "Finish a Medium level workout!",
-        "ro": "Finalizează un antrenament de nivel Mediu!"
+        "ro": "Finalizează un antrenament de nivel mediu!"
       },
       "type": "plan_name",
       "value": "Medium",
@@ -184,7 +184,7 @@
       "id": 19,
       "text": {
         "en": "Complete an Easy level workout!",
-        "ro": "Finalizează un antrenament de nivel Ușor!"
+        "ro": "Finalizează un antrenament de nivel ușor!"
       },
       "type": "plan_name",
       "value": "Easy",

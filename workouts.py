@@ -8,7 +8,6 @@ from workouts_page.legs import LegsWorkout
 from workouts_page.arms import ArmsWorkout
 from workouts_page.stretch import StretchWorkout
 
-# 🎨 Tema dinamică
 def get_theme_colors():
     mode = ctk.get_appearance_mode()
     if mode == "Dark":

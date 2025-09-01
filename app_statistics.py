@@ -9,10 +9,9 @@ import customtkinter as ctk
 import pymongo
 import pandas as pd
 import numpy as np
-import joblib
+import seaborn as sns
 import os
 
-# 🔁 Tema dinamică
 def get_theme_colors():
     mode = ctk.get_appearance_mode()
     if mode == "Dark":
@@ -39,9 +38,9 @@ def get_theme_colors():
         }
 
 class StatisticsPage(ctk.CTkFrame):
-    def __init__(self, parent, user_id, main_app):  
+    def __init__(self, parent, user_id, main_app):
         super().__init__(parent)
-        self.main_app = main_app  
+        self.main_app = main_app
         self.colors = get_theme_colors()
         self.configure(fg_color=self.colors["bg"])
 
@@ -105,57 +104,56 @@ class StatisticsPage(ctk.CTkFrame):
         self.plot_graphs(self.selected_workout.get())
 
     def load_user_data(self, workout_name):
-        workout_name = workout_name.strip()
         if workout_name in self.workout_dict and self.workout_dict[workout_name]:
             df = pd.DataFrame(self.workout_dict[workout_name])
-            
-            # 🔥 Doar dacă datele au sens (ignoră day total)
             df["date"] = pd.to_datetime(df["date"]).dt.date
-
-            # 🔧 Normalizează tipurile
-            numeric_columns = ["heart_rate", "calories", "vo2_max", "hydration_level", "energy_level"]
-            for col in numeric_columns:
+            numeric_cols = ["heart_rate", "calories", "vo2_max", "hydration_level", "energy_level"]
+            for col in numeric_cols:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
-            
-            # 📅 Grupăm doar după dată
-            df = df[["date"] + numeric_columns]
-            df = df.groupby("date", as_index=False).mean()
-            
-            # ✅ Dacă totuși rezultă un df gol (NaN-uri sau lipsă valori numerice)
-            if df[numeric_columns].dropna().empty:
-                return None
-            
-            return df
+            df = df[["date"] + numeric_cols].groupby("date", as_index=False).mean()
+            return df.dropna()
         return None
 
-
-
     def predict_future_vo2(self, df):
-        model_path = "model_vo2_final.pkl"
-        if not os.path.exists(model_path):
+        if df.empty:
             return pd.DataFrame()
-        model = joblib.load(model_path)
-        future_dates = [df["date"].max() + timedelta(days=i) for i in range(1, 8)]
-        ordinals = [pd.Timestamp(d).toordinal() for d in future_dates]
-        predicted_vo2 = model.predict(np.array(ordinals).reshape(-1, 1))
-        future_df = pd.DataFrame({"date": future_dates, "vo2_max": predicted_vo2})
-        for col in ["heart_rate", "calories", "hydration_level", "energy_level"]:
-            future_df[col] = df[col].mean()
-        return future_df
+        last_date = pd.to_datetime(df["date"]).max()
+        dates = [last_date + timedelta(days=i) for i in range(1, 8)]
+        x = np.arange(len(df))
+        y = df["vo2_max"].values
+        coef = np.polyfit(x, y, 1)
+        future_x = np.arange(len(df), len(df) + 7)
+        predicted = np.polyval(coef, future_x)
+        return pd.DataFrame({"date": dates, "vo2_max": predicted})
 
-    def get_progress_label(self, df):
-        model_path = "model_progress_final.pkl"
-        encoder_path = "label_encoder_final.pkl"
-        if not os.path.exists(model_path) or not os.path.exists(encoder_path):
-            return "necunoscut"
-        model = joblib.load(model_path)
-        le = joblib.load(encoder_path)
-        last_week = df[["vo2_max", "energy_level", "hydration_level"]].tail(7).mean().to_frame().T
-        try:
-            label = model.predict(last_week)[0]
-            return le.inverse_transform([label])[0]
-        except:
-            return "necunoscut"
+    def classify_progress(self, vo2_series):
+        clean_series = vo2_series.dropna()
+        if len(clean_series) < 8:
+            return "NECUNOSCUT"
+        delta = clean_series.iloc[-1] - clean_series.iloc[-8]
+        if delta > 1:
+            return "PROGRES"
+        elif delta < -1:
+            return "REGRES"
+        return "STAGNARE"
+
+    def compute_fitness_score(self, df):
+        return (
+            df["vo2_max"] + (df["calories"] / 10) + df["energy_level"]
+        ) / (df["heart_rate"] / 2)
+
+    def generate_advice(self, corr):
+        msgs = []
+        if corr.loc["vo2_max", "energy_level"] > 0.5:
+            msgs.append(t("key_172"))
+        if corr.loc["hydration_level", "energy_level"] < -0.3:
+            msgs.append(t("key_173"))
+        if corr.loc["heart_rate", "calories"] > 0.5:
+            msgs.append(t("key_174"))
+        if corr.loc["hydration_level", "vo2_max"] > 0.4:
+            msgs.append(t("key_175"))
+        return msgs
+
 
     def plot_graphs(self, workout_name):
         df = self.load_user_data(workout_name)
@@ -166,30 +164,36 @@ class StatisticsPage(ctk.CTkFrame):
         for widget in self.graph_frame.winfo_children():
             widget.destroy()
 
-        plt.style.use("default")
+        fitness_score = round(self.compute_fitness_score(df).mean(), 2)
+        progress_status = self.classify_progress(df["vo2_max"])
+        future_df = self.predict_future_vo2(df)
+
+        ctk.CTkLabel(self.graph_frame, text=f"{t('key_71')}: {fitness_score}", font=("Arial", 20, "bold"),
+                     text_color=self.colors["text"]).pack(pady=5)
+        progress_status_key = {
+            "PROGRES": "key_177",
+            "REGRES": "key_178",
+            "STAGNARE": "key_179",
+            "NECUNOSCUT": "key_180"
+        }.get(progress_status, "key_180")
+
+        ctk.CTkLabel(
+            self.graph_frame,
+            text=f"{t('key_181')} {t(progress_status_key)}",
+            font=("Arial", 16),
+            text_color=self.colors["text"]
+        ).pack(pady=5)
+
+
+        metrics = ["heart_rate", "calories", "vo2_max", "hydration_level", "energy_level"]
         fig, axes = plt.subplots(nrows=5, ncols=1, figsize=(10, 14))
         fig.patch.set_facecolor(self.colors["plot_bg"])
 
-        fitness_score = (
-            df["vo2_max"].mean() + (df["calories"].sum() / 10) + df["energy_level"].mean()
-        ) / (df["heart_rate"].mean() / 2)
-
-        progress_status = self.get_progress_label(df)
-
-        ctk.CTkLabel(self.graph_frame, text=f"{t('key_71')}: {round(fitness_score, 2)}", font=("Arial", 20, "bold"),
-                     text_color=self.colors["text"]).pack(pady=5)
-
-        ctk.CTkLabel(self.graph_frame, text=f"Stare progres: {progress_status.upper()}",
-                     font=("Arial", 16), text_color=self.colors["text"]).pack(pady=5)
-
-        future_df = self.predict_future_vo2(df)
-        metrics = ["heart_rate", "calories", "vo2_max", "hydration_level", "energy_level"]
-
         for i, col in enumerate(metrics):
-            axes[i].plot(df["date"], df[col], label=col.capitalize(), marker='o', color=self.colors["line"])
-            axes[i].set_facecolor(self.colors["plot_bg"])  # <-- setează fundalul corect
-            if not future_df.empty:
-                axes[i].plot(future_df["date"], future_df[col], linestyle="dashed", color=self.colors["future"])
+            axes[i].plot(df["date"], df[col], label=col.capitalize(), marker="o", color=self.colors["line"])
+            if col == "vo2_max" and not future_df.empty:
+                axes[i].plot(future_df["date"], future_df[col], linestyle="dotted", color=self.colors["future"], label=t("key_176"))
+            axes[i].set_facecolor(self.colors["plot_bg"])
             axes[i].set_title(col.capitalize(), color=self.colors["text"])
             axes[i].tick_params(colors=self.colors["text"])
             axes[i].legend()
@@ -198,36 +202,29 @@ class StatisticsPage(ctk.CTkFrame):
         canvas = FigureCanvasTkAgg(fig, master=self.graph_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True)
+        plt.close(fig) 
 
-        corr_fig, corr_ax = plt.subplots(figsize=(5, 4))
         corr = df[metrics].corr()
-        import seaborn as sns
-        sns.heatmap(corr, annot=True, cmap=self.colors["heatmap"], fmt=".2f", ax=corr_ax)
-        corr_ax.set_facecolor(self.colors["plot_bg"])
-        corr_ax.set_title(t("key_79"), color=self.colors["text"])
-        corr_ax.tick_params(colors=self.colors["text"])
-        corr_fig.patch.set_facecolor(self.colors["plot_bg"])
+        fig2, ax2 = plt.subplots(figsize=(6, 5))
+        fig2.patch.set_facecolor(self.colors["plot_bg"])
+        sns.heatmap(corr, annot=True, cmap=self.colors["heatmap"], fmt=".2f", ax=ax2,
+                    cbar=True, cbar_kws={'shrink': 0.8})
+        ax2.set_facecolor(self.colors["plot_bg"])
+        ax2.set_title(t("key_79"), color=self.colors["text"])
+        ax2.tick_params(colors=self.colors["text"])
+        plt.setp(ax2.get_xticklabels(), rotation=45, ha="right")
+        fig2.tight_layout()
 
-        corr_canvas = FigureCanvasTkAgg(corr_fig, master=self.graph_frame)
-        corr_canvas.draw()
-        corr_canvas.get_tk_widget().pack(fill="both", expand=True)
+        canvas2 = FigureCanvasTkAgg(fig2, master=self.graph_frame)
+        canvas2.draw()
+        canvas2.get_tk_widget().pack(fill="both", expand=True)
+        plt.close(fig2)  
 
-        messages = []
-        if corr.loc["vo2_max", "energy_level"] > 0.5:
-            messages.append(t("key_74"))
-        if corr.loc["hydration_level", "energy_level"] < -0.3:
-            messages.append(t("key_75"))
-        if corr.loc["heart_rate", "calories"] > 0.5:
-            messages.append(t("key_76"))
-        if corr.loc["hydration_level", "vo2_max"] > 0.4:
-            messages.append(t("key_77"))
-
+        messages = self.generate_advice(corr)
         if messages:
             msg_frame = ctk.CTkFrame(self.graph_frame, fg_color=self.colors["msg_frame"])
             msg_frame.pack(pady=10, padx=10, fill="x")
-            ctk.CTkLabel(msg_frame, text=t("key_73"), font=("Arial", 16, "bold"), text_color=self.colors["text"]).pack(anchor="w", padx=10, pady=(0, 5))
+            ctk.CTkLabel(msg_frame, text=t("key_73"), font=("Arial", 16, "bold"),
+                         text_color=self.colors["text"]).pack(anchor="w", padx=10, pady=(0, 5))
             for msg in messages:
                 ctk.CTkLabel(msg_frame, text=msg, text_color=self.colors["text"], anchor="w").pack(anchor="w", padx=10, pady=2)
-
-        if df["energy_level"].iloc[-1] < 40 or df["heart_rate"].iloc[-1] > 150:
-            ctk.CTkLabel(self.graph_frame, text=t("key_78"), text_color="red").pack(pady=5)

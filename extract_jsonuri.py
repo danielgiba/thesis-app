@@ -3,8 +3,10 @@ import mediapipe as mp
 import json
 import os
 
-VIDEOS_DIR = "workouts_page/tutorials"
-OUTPUT_DIR = "workouts_page/tutorials/landmarks"
+# VIDEOS_DIR = "workouts_page/tutorials"
+# OUTPUT_DIR = "workouts_page/tutorials/landmarks"
+VIDEOS_DIR = "demo"
+OUTPUT_DIR = "demo/landmarks"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 mp_pose = mp.solutions.pose
@@ -14,14 +16,14 @@ video_files = [f for f in os.listdir(VIDEOS_DIR) if f.endswith(".mp4")]
 
 for video_file in video_files:
     video_path = os.path.join(VIDEOS_DIR, video_file)
-    plan_name = os.path.splitext(video_file)[0]  # Fără extensie
+    plan_name = os.path.splitext(video_file)[0]  
     safe_name = plan_name.lower().replace(" ", "_")
     output_path = os.path.join(OUTPUT_DIR, f"{safe_name}.json")
 
     cap = cv2.VideoCapture(video_path)
     landmark_sequence = []
 
-    print(f"[🔄] Procesăm: {video_file}")
+    print(f"Procesare video: {video_file}")
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -45,7 +47,7 @@ for video_file in video_files:
             if len(landmarks) == 33:
                 landmark_sequence.append(landmarks)
 
-        # Sare câteva frame-uri (ex: salvează doar 1 din 3)
+        #1/3
         if cap.get(cv2.CAP_PROP_POS_FRAMES) % 3 != 0:
             continue
 
@@ -54,6 +56,6 @@ for video_file in video_files:
     with open(output_path, "w") as f:
         json.dump(landmark_sequence, f, indent=2)
 
-    print(f"[✅] Salvat: {output_path} | Frames: {len(landmark_sequence)}")
+    print(f"Save in : {output_path} & nr frame-uri: {len(landmark_sequence)}")
 
-print("\n🎉 Toate JSON-urile au fost generate cu succes!")
+print("\ntoate json-urile create!")

@@ -52,7 +52,7 @@ def send_otp(email, otp_code):
             server.send_message(msg)
         print("OTP sent successfully!")
     except Exception as e:
-        print(f"⚠ Failed to send OTP: {e}")
+        print(f"Failed to send OTP: {e}")
 
 class LoginApp(ctk.CTk):
     def __init__(self):
@@ -70,7 +70,13 @@ class LoginApp(ctk.CTk):
         self.create_widgets()
 
     def create_widgets(self):
-        self.theme_label = ctk.CTkLabel(self, text=ctk.get_appearance_mode())
+        self.theme_label = ctk.CTkLabel(
+            self,
+            text=t("key_167") if ctk.get_appearance_mode() == "Dark" else t("key_168"),
+            width=120,
+            anchor="w"
+        )
+
         self.theme_label.place(relx=0.03, rely=0.02, anchor="nw")
 
         self.theme_switch = ctk.CTkSwitch(
@@ -78,7 +84,7 @@ class LoginApp(ctk.CTk):
             text="",
             command=self.toggle_theme
         )
-        self.theme_switch.place(relx=0.13, rely=0.02, anchor="nw")
+        self.theme_switch.place(relx=0.20, rely=0.02, anchor="nw")
         self.theme_switch.select() if ctk.get_appearance_mode() == "Dark" else self.theme_switch.deselect()
 
         self.lang_dropdown = ctk.CTkComboBox(self, values=["ro", "en"], width=80)
@@ -142,7 +148,7 @@ class LoginApp(ctk.CTk):
         current = ctk.get_appearance_mode()
         new_theme = "Light" if current == "Dark" else "Dark"
         ctk.set_appearance_mode(new_theme)
-        self.theme_label.configure(text=new_theme)
+        self.theme_label.configure(text=t("key_167") if new_theme == "Dark" else t("key_168"))
 
     def update_texts(self):
         self.label.configure(text=t("key_1"))
@@ -156,6 +162,10 @@ class LoginApp(ctk.CTk):
         self.reset_email_entry.configure(placeholder_text=t("key_8"))
         self.send_otp_button.configure(text=t("key_9"))
         self.reset_status_label.configure(text="")
+        current_mode = ctk.get_appearance_mode()
+        self.theme_label.configure(
+            text=t("key_167") if current_mode == "Dark" else t("key_168")
+        )
 
     def login(self):
         from home import HomeApp
@@ -244,15 +254,21 @@ class SignupApp(ctk.CTk):
         self.create_widgets()
 
     def create_widgets(self):
-        self.theme_label = ctk.CTkLabel(self, text=ctk.get_appearance_mode())
-        self.theme_label.place(relx=0.03, rely=0.02, anchor="nw")
+        self.theme_label = ctk.CTkLabel(
+            self,
+            text=t("key_167") if ctk.get_appearance_mode() == "Dark" else t("key_168"),
+            width=120,
+            anchor="w"
+        )
+
+        self.theme_label.place(relx=0.05, rely=0.02, anchor="nw")
 
         self.theme_switch = ctk.CTkSwitch(
             self,
             text="",
             command=self.toggle_theme
         )
-        self.theme_switch.place(relx=0.13, rely=0.02, anchor="nw")
+        self.theme_switch.place(relx=0.22, rely=0.02, anchor="nw")
         self.theme_switch.select() if ctk.get_appearance_mode() == "Dark" else self.theme_switch.deselect()
 
         self.lang_dropdown = ctk.CTkComboBox(self, values=["ro", "en"], width=80)
@@ -261,22 +277,22 @@ class SignupApp(ctk.CTk):
         self.lang_dropdown.configure(command=lambda lang: [set_language(lang), self.update_texts()])
 
         self.label = ctk.CTkLabel(self, text=t("key_22"), font=("Arial", 24))
-        self.label.pack(pady=40)
+        self.label.pack(pady=(20, 10))
 
         self.name_entry = ctk.CTkEntry(self, width=220, placeholder_text=t("key_23"))
-        self.name_entry.pack(pady=10)
+        self.name_entry.pack(pady=6)
 
         self.username_entry = ctk.CTkEntry(self, width=220, placeholder_text=t("key_2"))
-        self.username_entry.pack(pady=10)
+        self.username_entry.pack(pady=6)
         self.username_status = ctk.CTkLabel(self, text="", text_color="green")
         self.username_status.pack()
         self.username_entry.bind("<KeyRelease>", self.check_username_availability)
 
         self.email_entry = ctk.CTkEntry(self, width=220, placeholder_text=t("key_8"))
-        self.email_entry.pack(pady=10)
+        self.email_entry.pack(pady=6)
 
         self.password_entry = ctk.CTkEntry(self, width=220, placeholder_text=t("key_3"), show="*")
-        self.password_entry.pack(pady=10)
+        self.password_entry.pack(pady=6)
 
         self.show_password_var = ctk.BooleanVar()
         self.show_password_check = ctk.CTkCheckBox(
@@ -289,31 +305,31 @@ class SignupApp(ctk.CTk):
             self, values=[t("key_126"), t("key_127"), t("key_128")], state="readonly", width=220
         )
         self.gender_selector.set(t("key_125"))
-        self.gender_selector.pack(pady=10)
+        self.gender_selector.pack(pady=6)
 
         self.birthday_entry = ctk.CTkEntry(self, width=220, placeholder_text=t("key_24"))
-        self.birthday_entry.pack(pady=10)
+        self.birthday_entry.pack(pady=6)
 
         self.goal_selector = ctk.CTkComboBox(
             self, values=[t("key_130"), t("key_131"), t("key_132")], state="readonly", width=220
         )
         self.goal_selector.set(t("key_129"))
-        self.goal_selector.pack(pady=10)
+        self.goal_selector.pack(pady=6)
 
         self.height_entry = ctk.CTkEntry(self, width=220, placeholder_text=t("key_25"))
-        self.height_entry.pack(pady=10)
+        self.height_entry.pack(pady=6)
 
         self.weight_entry = ctk.CTkEntry(self, width=220, placeholder_text=t("key_26"))
-        self.weight_entry.pack(pady=10)
+        self.weight_entry.pack(pady=6)
 
         self.signup_button = ctk.CTkButton(self, text=t("key_22"), command=self.signup, width=200)
-        self.signup_button.pack(pady=10)
+        self.signup_button.pack(pady=6)
 
         self.back_button = ctk.CTkButton(self, text=t("key_27"), command=self.go_back_to_login, width=200)
         self.back_button.pack(pady=5)
 
         self.status_label = ctk.CTkLabel(self, text="", text_color="red")
-        self.status_label.pack(pady=10)
+        self.status_label.pack(pady=6)
 
         self.update_texts()
 
@@ -321,7 +337,7 @@ class SignupApp(ctk.CTk):
         current = ctk.get_appearance_mode()
         new_theme = "Light" if current == "Dark" else "Dark"
         ctk.set_appearance_mode(new_theme)
-        self.theme_label.configure(text=new_theme)
+        self.theme_label.configure(text=t("key_167") if new_theme == "Dark" else t("key_168"))
 
     def update_texts(self):
         self.label.configure(text=t("key_22"))
@@ -339,6 +355,10 @@ class SignupApp(ctk.CTk):
         self.show_password_check.configure(text=t("key_4"))
         self.signup_button.configure(text=t("key_22"))
         self.back_button.configure(text=t("key_27"))
+        current_mode = ctk.get_appearance_mode()
+        self.theme_label.configure(
+            text=t("key_167") if current_mode == "Dark" else t("key_168")
+        )
 
     def toggle_password_visibility(self):
         if self.show_password_var.get():
@@ -348,7 +368,7 @@ class SignupApp(ctk.CTk):
 
     def check_username_availability(self, event=None):
         username = self.username_entry.get().strip()
-        if not re.fullmatch(r"[a-z0-9._]+", username):
+        if not re.fullmatch(r"[a-z._]+", username):
             self.username_status.configure(text=t("key_34"), text_color="red")
             return
         if self.collection.find_one({"username": username}):
@@ -361,11 +381,9 @@ class SignupApp(ctk.CTk):
         LoginApp().mainloop()
 
     def signup(self):
+        
         name = self.name_entry.get().strip()
         username = self.username_entry.get().strip()
-        if not re.fullmatch(r"[a-z._]+", username):
-            self.status_label.configure(text=t("key_28"))
-            return
 
         email = self.email_entry.get().strip()
         password = self.password_entry.get().strip()
@@ -374,6 +392,14 @@ class SignupApp(ctk.CTk):
         goal = self.goal_selector.get().strip()
         height = self.height_entry.get().strip()
         weight = self.weight_entry.get().strip()
+
+        if not all([name, username, email, password, gender, birthday, goal, height, weight]):
+            self.status_label.configure(text=t("key_170"), text_color="red")
+            return
+
+        if not re.fullmatch(r"[a-z._]+", username):
+            self.status_label.configure(text=t("key_28"))
+            return
 
         if self.collection.find_one({"username": username}):
             self.status_label.configure(text=t("key_29"))
@@ -395,7 +421,7 @@ class SignupApp(ctk.CTk):
         otp_code = generate_otp()
         send_otp(email, otp_code)
 
-        self.otp_entry = ctk.CTkEntry(self, placeholder_text=t("key_16"), width=300)
+        self.otp_entry = ctk.CTkEntry(self, placeholder_text=t("key_16"), width=120)
         self.otp_entry.pack(pady=10)
         self.verify_button = ctk.CTkButton(
             self, text=t("key_33"),
@@ -403,7 +429,7 @@ class SignupApp(ctk.CTk):
                 otp_code, name, username, email, password,
                 gender, birthday, goal, height, weight
             ),
-            width=300
+            width=120
         )
         self.verify_button.pack(pady=10)
 
@@ -428,6 +454,6 @@ class SignupApp(ctk.CTk):
             self.status_label.configure(text=t("key_37"))
 
 if __name__ == "__main__":
-    ctk.set_appearance_mode("Dark")  # Default
+    ctk.set_appearance_mode("Dark")  
     login_app = LoginApp()
     login_app.mainloop()

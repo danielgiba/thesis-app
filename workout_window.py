@@ -14,6 +14,8 @@ from datetime import datetime
 from bson import ObjectId
 from types import SimpleNamespace
 
+from PIL import Image, ImageTk
+
 
 def get_theme_colors():
     mode = ctk.get_appearance_mode()
@@ -88,12 +90,29 @@ class WorkoutWindow(ctk.CTkFrame):
 
         ctk.CTkButton(top_frame, text=t("key_113"), command=self.on_back, fg_color="transparent", text_color="cyan").pack(side="left", padx=10)
 
-        if "day" in self.plan_name.lower():
-            title_text = f"{self.plan_name} - Day {self.day}"
-        else:
-            title_text = f"{self.plan_name.capitalize()}"
+        plan_translation_map = {
+            "Easy Plan 1": "key_45",
+            "Easy Plan 2": "key_46",
+            "Medium Plan 1": "key_47",
+            "Medium Plan 2": "key_48",
+            "Hard Plan 1": "key_49",
+            "Hard Plan 2": "key_50",
+            "Classic Workout": "key_57",
+            "Abs Workout": "key_59",
+            "Legs Workout": "key_61",
+            "Arms Workout": "key_63",
+            "Stretch Workout": "key_65"
+        }
 
-        title_label = ctk.CTkLabel(top_frame, text=f"🏋️ {title_text}", font=("Arial", 20, "bold"), text_color=self.colors["text"])
+        plan_key = plan_translation_map.get(self.plan_name)
+        translated_plan = t(plan_key) if plan_key else self.plan_name
+
+        if "day" in self.plan_name.lower():
+            title_text = f"{translated_plan} - {t('key_170')} {self.day}"  
+        else:
+            title_text = translated_plan
+
+        title_label = ctk.CTkLabel(top_frame, text=f"{title_text}", font=("Arial", 20, "bold"), text_color=self.colors["text"])
         title_label.pack(side="top", pady=5)
 
         middle_frame = ctk.CTkFrame(self, fg_color=self.colors["bg"])
@@ -104,7 +123,7 @@ class WorkoutWindow(ctk.CTkFrame):
 
         self.media_player.set_hwnd(video_container.winfo_id())
 
-        right_panel = ctk.CTkFrame(middle_frame, fg_color=self.colors["panel"], width=300, height=205, corner_radius=12)
+        right_panel = ctk.CTkFrame(middle_frame, fg_color=self.colors["panel"], width=500, height=500, corner_radius=12)
         right_panel.pack(side="right", fill="y", padx=10)
 
         self.feedback_label = Label(right_panel, text=t("key_118"), font=("Arial", 15), bg=self.colors["feedback_bg"], fg=self.colors["feedback_fg"])
@@ -116,24 +135,47 @@ class WorkoutWindow(ctk.CTkFrame):
         bottom_frame = ctk.CTkFrame(self, fg_color=self.colors["bg"], height=50)
         bottom_frame.pack(fill="x", pady=10)
 
-        ctk.CTkButton(bottom_frame, text="▶️ " + t("key_114"), command=self.start_video, fg_color=self.colors["accent_green"], text_color=self.colors["btn_text"]).pack(side="left", padx=10)
-        ctk.CTkButton(bottom_frame, text="⏸ " + t("key_115"), command=self.pause_video, fg_color=self.colors["accent_orange"], text_color=self.colors["btn_text"]).pack(side="left", padx=10)
-        ctk.CTkButton(bottom_frame, text="⏹ " + t("key_116"), command=self.stop_video, fg_color=self.colors["accent_red"], text_color=self.colors["btn_text"]).pack(side="left", padx=10)
-        ctk.CTkButton(bottom_frame, text="📷 " + t("key_117"), command=self.start_camera_thread, fg_color=self.colors["accent_blue"], text_color=self.colors["btn_text"]).pack(side="left", padx=10)
+        # ctk.CTkButton(bottom_frame, text=" " + t("key_114"), command=self.start_video, fg_color=self.colors["accent_green"], text_color=self.colors["btn_text"]).pack(side="left", padx=10)
+        # ctk.CTkButton(bottom_frame, text=" " + t("key_115"), command=self.pause_video, fg_color=self.colors["accent_orange"], text_color=self.colors["btn_text"]).pack(side="left", padx=10)
+        # ctk.CTkButton(bottom_frame, text=" " + t("key_116"), command=self.stop_video, fg_color=self.colors["accent_red"], text_color=self.colors["btn_text"]).pack(side="left", padx=10)
+        # ctk.CTkButton(bottom_frame, text=" " + t("key_117"), command=self.start_camera_thread, fg_color=self.colors["accent_blue"], text_color=self.colors["btn_text"]).pack(side="left", padx=10)
 
         self.video_cv.set(cv2.CAP_PROP_POS_FRAMES, 0)
         self.start_camera_thread()
 
         self.feedback_label.config(text=t("key_118"))
         self.parameters_label.config(
-            text=(f"💓 {t('key_119')}: -\n"
-                  f"🔥 {t('key_120')}: -\n"
-                  f"💧 {t('key_121')}: -\n"
-                  f"✅ {t('key_122')}: -\n"
-                  f"⚡ {t('key_123')}: -\n"
-                  f"🫁 {t('key_124')}: -")
+            text=(f" {t('key_119')}: -\n"
+                  f" {t('key_120')}: -\n"
+                  f" {t('key_121')}: -\n"
+                  f" {t('key_122')}: -\n"
+                  f" {t('key_123')}: -\n"
+                  f" {t('key_124')}: -\n"
+                  f" {t('key_169')}: -")
         )
         self.after(10000, self.update_parameters)
+
+        self.camera_label = Label(right_panel, bg=self.colors["bg"])
+        self.camera_label.pack(pady=10)
+        self.update_camera_feed()
+
+    def is_active_interval(self):
+        #ms to s
+        current_time = self.media_player.get_time() / 1000 
+        return current_time >= 14 and not (43 <= current_time < 54)
+
+
+    def update_camera_feed(self):
+        frame = self.param_calculator.camera_frame
+        if frame is not None:
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(rgb)
+            img = img.resize((480, 360))  
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.camera_label.imgtk = imgtk
+            self.camera_label.configure(image=imgtk)
+        #fps
+        self.after(30, self.update_camera_feed)
 
     def start_video(self):
         if self.video_cap is None:
@@ -161,16 +203,23 @@ class WorkoutWindow(ctk.CTkFrame):
 
     def check_video_status(self):
         state = self.media_player.get_state()
-        print("Current state:", state)  # DEBUG
+        print("Current state:", state) 
         if state == vlc.State.Ended and not self.finished:
-            print("Video finished — triggering complete_workout") 
+            print("Video finished => triggering complete_workout") 
             self.finished = True
             self.complete_workout()
         else:
             self.after(1000, self.check_video_status)
 
     def on_back(self):
-        self.param_calculator.stop_camera()
+        try:
+            self.param_calculator.stop_camera() 
+            self.media_player.stop()             
+            cv2.destroyAllWindows()              
+            self.video_cv.release()              
+        except Exception as e:
+            print("Error about resources:", e)
+
         self.back_callback()
         self.main_app.show_navigation_bar()
 
@@ -182,12 +231,13 @@ class WorkoutWindow(ctk.CTkFrame):
         user_landmarks = results_pose.pose_landmarks.landmark if results_pose and results_pose.pose_landmarks else None
         if not user_landmarks:
             self.parameters_label.config(
-                text=(f"💓 {t('key_119')}: N/A\n"
-                      f"🔥 {t('key_120')}: N/A\n"
-                      f"💧 {t('key_121')}: N/A\n"
-                      f"✅ {t('key_122')}: N/A\n"
-                      f"⚡ {t('key_123')}: N/A\n"
-                      f"🫁 {t('key_124')}: N/A")
+                text=(f" {t('key_119')}: N/A\n"
+                      f" {t('key_120')}: N/A\n"
+                      f" {t('key_121')}: N/A\n"
+                      f" {t('key_122')}: N/A\n"
+                      f" {t('key_123')}: N/A\n"
+                      f" {t('key_124')}: N/A\n"
+                      f" {t('key_169')}: N/A")
             )
             self.after(1000, self.update_parameters)
             return
@@ -238,7 +288,8 @@ class WorkoutWindow(ctk.CTkFrame):
                 "hydration_level": params["hydration_level"],
                 "execution_accuracy": params["execution_accuracy"],
                 "energy_level": params["energy_level"],
-                "vo2_max": params["vo2_max"]
+                "vo2_max": params["vo2_max"],
+                "spo2": params["spo2"]
             }
 
             self.users_collection.update_one(
@@ -247,18 +298,28 @@ class WorkoutWindow(ctk.CTkFrame):
             )
 
             try:
+                if self.is_active_interval():
+                        accuracy_display = f"{round(float(params['execution_accuracy']))}%"
+                        self.feedback_label.config(text=t("key_118"))
+                else:
+                        accuracy_display = "-"
+                        self.feedback_label.config(text="Pauză")
+
                 self.parameters_label.config(
-                    text=(f"💓 {t('key_119')}: {round(float(params['heart_rate']))} BPM\n"
-                          f"🔥 {t('key_120')}: {round(float(params['calories']), 1)} kcal\n"
-                          f"💧 {t('key_121')}: {round(float(params['hydration_level']))}%\n"
-                          f"✅ {t('key_122')}: {round(float(params['execution_accuracy']))}%\n"
-                          f"⚡ {t('key_123')}: {round(float(params['energy_level']))}%\n"
-                          f"🫁 {t('key_124')}: {round(float(params['vo2_max']), 2)} ml/kg/min")
-                )
+                        text=(f" {t('key_119')}: {round(float(params['heart_rate']))} BPM\n"
+                            f" {t('key_120')}: {round(float(params['calories']), 1)} kcal\n"
+                            f" {t('key_121')}: {round(float(params['hydration_level']))}%\n"
+                            f" {t('key_122')}: {accuracy_display}\n"
+                            f" {t('key_123')}: {round(float(params['energy_level']))}%\n"
+                            f" {t('key_124')}: {int(round(params['vo2_max']))} ml/kg/min\n"
+                            f" {t('key_169')}: {round(float(params['spo2']))}%")
+                    )
             except Exception as e:
                 print("Error displaying parameters:", e)
 
         self.after(1000, self.update_parameters)
+
+    
 
     def complete_workout(self):
         def avg(values):
@@ -305,8 +366,8 @@ class WorkoutWindow(ctk.CTkFrame):
             with open(path, "r") as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"❌ Landmark JSON not found: {path}")
+            print(f"Landmark JSON not found: {path}")
             return None
         except Exception as e:
-            print(f"⚠️ Error loading landmarks: {e}")
+            print(f"Error loading landmarks: {e}")
             return None

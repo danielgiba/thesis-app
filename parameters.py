@@ -27,8 +27,11 @@ def filter_signal(data, lowcut, highcut, fs, order=5):
 
 class ParameterCalculator:
     def __init__(self, weight=get_user_weight()):
-        # ==== ▶️ Sistem MediaPipe și video
         self.camera_cap = cv2.VideoCapture(0)
+
+        self.camera_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+        self.camera_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
+
         self.camera_running = False
         self.mp_pose = mp.solutions.pose
         self.mp_face_mesh = mp.solutions.face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -37,7 +40,6 @@ class ParameterCalculator:
         self.mp_holistic = mp.solutions.holistic
         self.holistic = self.mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
-        # ==== 🔁 Status intern
         self.reps_state = "START"
         self.reps_count = 0
         self.last_rep_time = None
@@ -46,10 +48,9 @@ class ParameterCalculator:
         self.execution_accuracy = 0
         self.joint_angles = {}
 
-        # ==== 🔧 Parametri personali
         self.user_weight = weight
 
-        # ==== 🩺 Date fiziologice
+        #date init
         self.total_calories = 0.00
         self.heart_rate = 80
         self.last_bpm = None
@@ -58,13 +59,13 @@ class ParameterCalculator:
         self.last_vo2_max = None
         self.movement_intensity = 0
 
-        # ==== 🧠 Buffere de date
+        #buffere de date
         self.bpm_buffer = deque(maxlen=1000)
         self.red_channel_buffer = deque(maxlen=1000)
         self.breathing_buffer = deque(maxlen=150)
         self.face_temperature_buffer = deque(maxlen=300)
 
-        # ==== 🎥 Frame-uri & landmark-uri
+        #frameuri&landmarkuri
         self.prev_landmarks = None
         self.prev_frame = None
         self.camera_frame = None
@@ -74,7 +75,7 @@ class ParameterCalculator:
         self.fps = 30
         self.start_time = time.time()
 
-        # ==== 🎯 Kalman Filter
+        #filtru kalman
         self.kalman = cv2.KalmanFilter(4, 2)
         self.kalman.measurementMatrix = np.eye(2, 4, dtype=np.float32)
         self.kalman.transitionMatrix = np.array([
@@ -89,9 +90,11 @@ class ParameterCalculator:
         self.kalman.measurementNoiseCov = np.eye(2, dtype=np.float32) * self.base_R
         self.intensity_thresholds = [0.5, 1.5]
 
-        # ==== ✅ Inițializări dependente de parametri calculați
-        self.hydration_level = self.estimate_initial_hydration()  # bazat pe temperatură & puls
-        self.energy_level = self.estimate_initial_energy()        # bazat pe hidratare, vo2, bpm etc.
+        #init
+        self.hydration_level = self.estimate_initial_hydration()  
+        self.energy_level = self.estimate_initial_energy() 
+        #self.last_hydration_level = self.hydration_level   
+        self.hydration_drain = 0.0   
 
 
     def camera_loop(self):
@@ -167,18 +170,22 @@ class ParameterCalculator:
 
             if len(self.bpm_buffer) == self.bpm_buffer.maxlen:
                 bpm = self.calculate_bpm(np.array(self.bpm_buffer))
-                print(f"📊 BPM Buffer (Ultimele 10 valori): {list(self.bpm_buffer)[-10:]}")
+                print(f"BPM Buffer (ultimele 10 valori): {list(self.bpm_buffer)[-10:]}")
                 if 60 <= bpm <= 180:
                     self.last_bpm = bpm
                     self.heart_rate = round((self.last_bpm + self.heart_rate) / 2, 2)
-                    #self.bpm_buffer.append(self.heart_rate)  # Nu filtrul verde, ci valoare reală
+                    #self.bpm_buffer.append(self.heart_rate) 
                 self.bpm_buffer.clear()
 
             cv2.rectangle(frame, (roi_x, roi_y), (roi_x + roi_w, roi_y + roi_h), (0, 255, 0), 2)
             cv2.putText(frame, "ROI Forehead", (roi_x, roi_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
-            cv2.imshow("Camera Feed", frame)
+            #cv2.imshow("Camera Feed", frame)
+            self.camera_frame = frame.copy()
+            #time.sleep(1 / self.fps)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            #if cv2.waitKey(1) & 0xFF == ord('q'):
+            #    break
+            if not self.camera_running:
                 break
 
         self.camera_cap.release()
@@ -218,15 +225,14 @@ class ParameterCalculator:
         return [(lm.x, lm.y, lm.z + depth_offset) for lm in landmarks]
 
     def calculate_bpm(self, frame):
-        """ Calculează ritmul cardiac cu optimizări avansate pentru repaus și mișcare. """
 
         if frame is None or len(frame) < 100:
-            print("⚠️ Nu sunt suficiente date pentru BPM, folosesc ultima valoare.")
+            print("Nu sunt suficiente date pentru BPM, folosesc ultima valoare")
             return self.last_bpm if self.last_bpm else 75  
 
         fs = self.fps  
 
-        # ✅ Extragem semnalul corect din frame sau buffer
+        #extragere semnal bun
         if isinstance(frame, np.ndarray) and frame.ndim == 3:
             roi_x, roi_y, roi_w, roi_h = 150, 100, 100, 100  
             if hasattr(self, 'kalman'):  
@@ -249,13 +255,13 @@ class ParameterCalculator:
             combined_signal = frame  
 
         else:
-            print("⚠️ Eroare: Tip necunoscut de date primit în `calculate_bpm`!")
+            print("Eroare tip data in 'calculate_bpm'")
             return self.last_bpm if self.last_bpm else 75  
 
-        # ✅ Corecție pentru variațiile de iluminare
+        #corectie pentru variatiile de iluminare
         combined_signal -= np.mean(combined_signal)  
 
-        # ✅ Filtrare Butterworth pentru eliminarea zgomotului
+        #filtrare Butterworth pentru eliminarea zgomotului
         nyq = 0.5 * fs
         low = 0.7 / nyq
         high = 3.0 / nyq
@@ -265,30 +271,30 @@ class ParameterCalculator:
         if np.isnan(filtered_signal).any():
             return self.last_bpm if self.last_bpm else 75  
 
-        # ✅ Filtrare Wavelet pentru eliminarea artefactelor de mișcare
+        #filtrarea wavelet pentru eliminarea artefactelor de miscare
         wavelet_level = min(3, pywt.dwt_max_level(len(filtered_signal), 'db4'))
         coeffs = pywt.wavedec(filtered_signal, 'db4', level=wavelet_level)
         coeffs[-1] = np.zeros_like(coeffs[-1])  
         filtered_signal = pywt.waverec(coeffs, 'db4')
 
-        # ✅ Aplicăm Analiza Componentelor Independente (ICA)
+        #aplicare ICA
         ica = FastICA(n_components=1, random_state=42)
         try:
             ica_signal = ica.fit_transform(filtered_signal.reshape(-1, 1)).flatten()
         except ValueError:
             return self.last_bpm if self.last_bpm else 75  
 
-        # ✅ Aplicăm FFT pentru a identifica ritmul cardiac
+        #FFT pt puls
         fft_result = np.abs(fft(ica_signal))
         freqs = np.fft.rfftfreq(len(ica_signal), 1/fs)
 
-        # ✅ Corectăm problema cu indexarea FFT
+        # corectare cu indexarea FFT
         if len(freqs) != len(fft_result):
             min_length = min(len(freqs), len(fft_result))
             freqs = freqs[:min_length]
             fft_result = fft_result[:min_length]
 
-        # ✅ Filtrăm frecvențele valide (45 - 180 BPM)
+        #filtrarea frecv
         valid_indices = (freqs >= 0.75) & (freqs <= 3.0)
         freqs_valid = freqs[valid_indices]
         fft_valid = fft_result[valid_indices]
@@ -299,85 +305,88 @@ class ParameterCalculator:
         else:
             return self.last_bpm if self.last_bpm else 75  
 
-        # ✅ 🔹 **Ajustare în funcție de mișcare**
+        #ajustare cu miscare
         if self.movement_intensity < 0.3:  
-            bpm = max(55, bpm - 10)  # Scade BPM în repaus
+            bpm = max(55, bpm - 10)  #bpm in repaus
         elif self.movement_intensity > 1.5:  
-            bpm = min(170, bpm + 5)  # Crește BPM în mișcare intensă
+            bpm = min(170, bpm + 5)  #bpm ca intensitate
 
-        # ✅ 🔹 **Evităm schimbările bruște nerealiste**
+        #de evitat valorile nerealiste
         if self.last_bpm:
             bpm_change = bpm - self.last_bpm
             if abs(bpm_change) > 15:  
                 bpm = self.last_bpm + np.sign(bpm_change) * 10
 
-        # ✅ 🔹 **Stabilizare finală (dar fără efect artificial)**
+        #stabilizare finala
         if self.last_bpm:
             bpm = (0.6 * self.last_bpm) + (0.4 * bpm)  
 
-        # ✅ 🔹 **Limităm intervalul BPM la valori reale**
+        #limitare reala 
         bpm = max(60, min(180, bpm))
 
         self.last_bpm = bpm  
-        print(f"❤️ BPM detectat: {self.last_bpm:.2f}")
+        print(f"BPM detectat: {self.last_bpm:.2f}")
 
         return round(bpm, 2)
     
     def get_face_temperature(self):
-        """ Estimează temperatura pielii din camera video, folosind analiza zonei frunții. """
         if not self.face_temperature_buffer:
-            return 36.5  # Valoare implicită
+            return 36.5  
 
-        # 🔹 Mediem ultimele 10 valori pentru a evita fluctuațiile
+        #mediere fluctuatii
         return round(np.mean(list(self.face_temperature_buffer)[-10:]), 1)
 
     
     def update_hydration_level(self, results_pose=None, temperature=None):
-        """
-        Calculează nivelul de hidratare pe baza scorului compus: temperatură, puls, mișcare.
-        Inspirat din articolul MDPI Electronics 2020.
-        """
+        #calc nivelul de hidratare pe baza scorului cu temperatura, puls & miscare
 
-        # 🔹 Temperatură și puls - fallback
         temp = temperature if temperature else self.get_face_temperature()
         hr = self.heart_rate if self.heart_rate else 80
         motion = self.movement_intensity
 
-        # 🔸 1. Scor temperatură (ideal 36.5 - 37.2)
-        temp_score = 100 - abs(36.8 - temp) * 35  # penalizare severă pentru deviație
+        #temp -> 36.5-37.2
+        temp_score = 100 - abs(36.8 - temp) * 35 
         temp_score = max(0, min(100, temp_score))
 
-        # 🔸 2. Scor puls (ideal 70 - 90 bpm)
+        #pulsul -> 70-90
         if hr < 60 or hr > 120:
             hr_score = 60
         else:
             hr_score = 100 - abs(80 - hr) * 1.5
         hr_score = max(0, min(100, hr_score))
 
-        # 🔸 3. Scor mișcare (normalizat între 0-100)
-        motion_score = 100 - min(100, motion * 50)  # e.g. motion=1.5 → score ~25
+        motion_score = 100 - min(100, motion * 50) 
         motion_score = max(0, min(100, motion_score))
 
-        # 🔹 Scor compus ponderat
         hydration_score = (0.5 * temp_score) + (0.3 * hr_score) + (0.2 * motion_score)
 
-        # 🔻 Decay lent dacă scorul e mic, creștere dacă e bun
-        if hydration_score < 50:
-            self.hydration_level -= 0.5
-        elif hydration_score > 80 and self.hydration_level < 100:
-            self.hydration_level += 0.2  # mică regenerare
+        drain = 0.0
 
-        # 🧪 Stabilizare și limitare
+        if hydration_score < 60:
+            drain += 0.1
+        if self.heart_rate > 100:
+            drain += 0.05
+        if self.movement_intensity > 0.5:
+            drain += 0.1
+
+        self.hydration_drain = drain
+
+        #check
+        if hydration_score > 85 and self.hydration_level < 100:
+            self.hydration_level += 0.1 
+        self.hydration_level -= self.hydration_drain
+
+        #stabilizare&limitare
         self.hydration_level = round(max(30, min(100, self.hydration_level)), 1)
         self.last_hydration_score = round(hydration_score, 1)
 
-        print(f"💧 Hidratare scor: {hydration_score:.1f} | Nivel actual: {self.hydration_level}%")
+        print(f"Hidratare scor: {hydration_score:.1f} & Nivel actual: {self.hydration_level}%")
         return self.hydration_level
 
 
 
     def calculate_joint_angles(self, landmarks):
-        # Articulații multiple pentru o acoperire mai largă
+        #articulatiile
         joint_sets = {
             'left_elbow': (11, 13, 15),
             'right_elbow': (12, 14, 16),
@@ -393,7 +402,8 @@ class ParameterCalculator:
         angles = {}
         for joint_name, (p1, p2, p3) in joint_sets.items():
             angle = self.calculate_angle(p1, p2, p3, landmarks)
-            angle = max(0, min(180, angle))  # asigurare interval valid
+            #unghi realizabil
+            angle = max(0, min(180, angle))  
             angles[joint_name] = angle
 
         self.joint_angles = angles
@@ -432,59 +442,53 @@ class ParameterCalculator:
 
     
     def calculate_spo2(self):
-        """ Calculează SpO₂ folosind Ratio-of-Ratios cu corecție calibrată. """
-
         if len(self.bpm_buffer) < 50 or len(self.red_channel_buffer) < 50:
-            print("⚠️ Buffer insuficient pentru SpO₂! Folosim valoare implicită.")
-            self.spo2 = 98.0  # 🔹 Setăm un default dacă nu avem suficiente date
+            print("Buffer insuficient pentru SpO2 => folosim valoare implicita")
+            self.spo2 = 98.0 
             return  
 
-        fs = 30  # Frecvența de eșantionare
+        fs = 30 
 
-        # ✅ Convertim listele în numpy arrays
+        #convertire in arrays
         red_signal = np.array(self.red_channel_buffer)
         green_signal = np.array(self.bpm_buffer)
 
-        # ✅ Aplicăm filtrare pentru eliminarea zgomotului
+        #filtrarea eliminarii zgomotului
         red_ac = filter_signal(red_signal, 0.7, 3.0, fs)  
         green_ac = filter_signal(green_signal, 0.7, 3.0, fs)
 
-        # ✅ Componente DC = medie semnal
+        #DC ca media de semnal
         red_dc = np.mean(red_signal)
         green_dc = np.mean(green_signal)
-
-        # 🚨 Evităm împărțirea la zero
+        #sa nu impart la 0
         if red_dc == 0 or green_dc == 0:
-            print("⚠️ Nu se poate calcula SpO₂! Folosim valoare implicită.")
-            self.spo2 = 98.0  # 🔹 Default în cazul unei erori
+            print("Nu se poate calcula SpO₂ => folosim valoare implicita")
+            self.spo2 = 98.0  #default in caz de ceva
             return  
 
-        # ✅ Calculăm raporturile AC/DC
+        #calc raporturile AC/DC
         r_ratio = np.std(red_ac) / red_dc
         g_ratio = np.std(green_ac) / green_dc
 
-        # ✅ Aplicăm formula Ratio-of-Ratios cu ajustare
-        ratio = (r_ratio / g_ratio) * 1.2  # Corecție empirică
+        #formula ratio-of-ratios + empiric
+        ratio = (r_ratio / g_ratio) * 1.2  
 
-        # 🔢 Formula calibrată
-        A = 110.0  # Creștem valoarea de bază
-        B = 25.0   # Reducem influența raportului
+        #coeficienti din art
+        A = 110.0  
+        B = 25.0  
 
         spo2_estimate = A - B * ratio  
+        #limitare : 95-99
+        if np.isnan(spo2_estimate) or spo2_estimate < 96:
+            self.spo2 = 98.0  
+        else:
+            self.spo2 = round(min(99, spo2_estimate), 1)
 
-        # ✅ Limităm valorile realiste (95-100%)
-        self.spo2 = max(95, min(99, spo2_estimate))
-
-        print(f"🔵 SpO₂ estimat: {self.spo2:.2f}%")
+        print(f"SpO2 estimat: {self.spo2:.2f}%")
 
     def calculate_vo2_max(self):
-        """
-        Estimează VO₂ Max pe baza Heart Rate Recovery (HRR), inspirat din PMC3996514.
-        Formula: VO2max ≈ 70 + (HRR × 0.5), unde HRR = HR_peak - HR_1min.
-        Se ajustează ușor în funcție de intensitate și greutate.
-        """
         if len(self.bpm_buffer) < 60:
-            print("⚠️ Nu sunt suficiente date pentru VO₂ Max – folosim valoare anterioară.")
+            print("Nu sunt suficiente date pentru VO2Max => folosim valoare anterioara")
             return self.last_vo2_max if self.last_vo2_max is not None else 40.0
 
         hr_peak = max(self.bpm_buffer)
@@ -493,7 +497,7 @@ class ParameterCalculator:
 
         base_vo2 = 70 + (hrr * 0.5)
 
-        # Ajustări fine
+        #ajustari
         intensity_factor = 1.0
         if self.movement_intensity > 1.5:
             intensity_factor = 1.05
@@ -508,23 +512,19 @@ class ParameterCalculator:
                 weight_factor = 0.97
 
         vo2_final = base_vo2 * intensity_factor * weight_factor
-        vo2_final = round(vo2_final, 2)  # ⬅️ Fără limită superioară!
+        vo2_final = round(vo2_final, 2)
 
         self.last_vo2_max = vo2_final
-        print(f"🫁 VO₂ Max calculat (HRR method): {vo2_final:.2f} ml/kg/min")
+        print(f"VO2Max calculat cu HRR: {vo2_final:.2f} ml/kg/min")
         return vo2_final
 
 
     def calculate_movement_intensity(self, landmarks, prev_landmarks, dt, frame=None, prev_frame=None):
-        """Calculează intensitatea mișcării combinând 3 surse:
-        - Keypoints biomecanici (viteza articulațiilor)
-        - Motion Energy (diferență între cadre – siluete)
-        - Tracking (deplasarea centrului corpului în imagine)
-        """
+        #calc intensitatea miscarii combinand: keypoints, motion energy & tracking
         if (prev_landmarks is None or dt == 0) and (frame is None or prev_frame is None):
             return 0  
 
-        # 🔹 1. Biomecanic – diferența între keypoints
+        #diferenta dintre keypoints
         total_movement = 0
         joint_indices = [11, 12, 13, 14, 23, 24, 25, 26]
         for idx in joint_indices:
@@ -534,7 +534,7 @@ class ParameterCalculator:
             total_movement += speed
         biomech_intensity = total_movement / len(joint_indices)
 
-        # 🔹 2. Motion Energy – diferență între cadre video
+        #pt motion energy
         motion_energy = 0
         if frame is not None and prev_frame is not None:
             gray1 = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
@@ -543,7 +543,7 @@ class ParameterCalculator:
             _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
             motion_energy = np.sum(thresh) / 255 / (frame.shape[0] * frame.shape[1])  # normalizat [0,1]
 
-        # 🔹 3. Tracking – mișcarea centrului corpului (bounding box)
+        #miscarea centrului corpului => bounding box, ca tracking
         def get_center(landmarks):
             xs = [lm.x for lm in landmarks]
             ys = [lm.y for lm in landmarks]
@@ -555,7 +555,7 @@ class ParameterCalculator:
             curr_center = get_center(landmarks)
             center_movement = np.linalg.norm(curr_center - prev_center) / dt
 
-        # 🔸 Combinație ponderată – poți ajusta proporțiile după testare
+        #comb poderata
         combined_intensity = (
             0.5 * biomech_intensity + 
             0.3 * motion_energy + 
@@ -566,7 +566,7 @@ class ParameterCalculator:
  
     
     def estimate_initial_energy(self):
-        vo2 = self.last_vo2_max if self.last_vo2_max is not None else 60.0
+        vo2 = self.last_vo2_max if self.last_vo2_max is not None else 50.0
         vo2_score = (vo2 / 60) * 40
 
         hydration_score = (self.hydration_level / 100) * 15
@@ -578,39 +578,91 @@ class ParameterCalculator:
         initial_energy = 45 + vo2_score + hydration_score - bpm_penalty - movement_penalty
         self.energy_level = round(max(50, min(100, initial_energy)))
 
-        print(f"⚡ Energie inițială estimată: {self.energy_level}%")
+        print(f"Energie initiala: {self.energy_level}%")
         return self.energy_level
+    
+    def estimate_facial_fatigue(self, landmarks):
+        landmarks = list(landmarks.landmark)
+        def euclidean(p1, p2):
+            return np.linalg.norm(np.array([p1.x, p1.y]) - np.array([p2.x, p2.y]))
+        #EAR
+        left_eye = [33, 160, 158, 133, 153, 144]
+        right_eye = [362, 385, 387, 263, 373, 380]
+
+        left_ear = (
+            euclidean(landmarks[left_eye[1]], landmarks[left_eye[5]]) +
+            euclidean(landmarks[left_eye[2]], landmarks[left_eye[4]])
+        ) / (2.0 * euclidean(landmarks[left_eye[0]], landmarks[left_eye[3]]))
+
+        right_ear = (
+            euclidean(landmarks[right_eye[1]], landmarks[right_eye[5]]) +
+            euclidean(landmarks[right_eye[2]], landmarks[right_eye[4]])
+        ) / (2.0 * euclidean(landmarks[right_eye[0]], landmarks[right_eye[3]]))
+
+        ear = (left_ear + right_ear) / 2.0
+
+        #MAR
+        mouth = [61, 291, 81, 178, 13, 14]
+        mar = (
+            euclidean(landmarks[mouth[2]], landmarks[mouth[3]]) +
+            euclidean(landmarks[mouth[4]], landmarks[mouth[5]])
+        ) / (2.0 * euclidean(landmarks[mouth[0]], landmarks[mouth[1]]))
+
+        #praguri empirice
+        fatigue_score = 0
+        if ear < 0.22:
+            fatigue_score += 1.0
+        if mar > 0.6:
+            fatigue_score += 1.5
+
+        return fatigue_score  
 
 
-
-    def calculate_energy_level(self):
-        """ Scădere exactă cu 1% la fiecare update, ajustată cu detectarea corpului și articolul științific """
-
-        # 🔹 Asigurăm o scădere lină doar la intervale de timp regulate
+    def calculate_energy_level(self, face_landmarks=None):
+        #scadere cu 1% pe parcurs pe baza miscarii
+        #scaderea cum trebuie 
         current_time = time.time()
         if not hasattr(self, 'last_energy_update'):
-            self.last_energy_update = current_time  # Inițializăm timpul ultimei actualizări
+            self.last_energy_update = current_time  
 
-        # Scădem doar dacă au trecut cel puțin 10 secunde
+        #scadere doar daca au trecut cel putin 10 secunde
         if current_time - self.last_energy_update < 10:
             return self.energy_level
-
-        # 🔹 Factori de oboseală (bazat pe articol)
+        #fata pt oboseala
         fatigue_factor = (self.total_calories / (self.user_weight * 10)) * 3  
         movement_penalty = min(3, self.movement_intensity * 1.2)  
         hydration_bonus = (self.hydration_level / 100) * 2  
         spo2_bonus = ((self.spo2 - 90) / 10) * 2  
         vo2_bonus = ((self.last_vo2_max - 30) / 30) * 2 if self.last_vo2_max is not None else 0
 
-        # 🔹 Scădere fixă cu 1% doar dacă există mișcare
-        if self.movement_intensity > 0.1:  
-            self.energy_level -= 1  
+        effort_score = 0
 
-        # 🔹 Prevenim scăderea sub 0 sau peste 100%
-        self.energy_level = max(0, min(100, self.energy_level))
+        #intensitatea miscarii
+        if self.movement_intensity > 0.3:
+            effort_score += 0.5
 
-        # 🔹 Actualizăm timpul ultimei scăderi
+        #puls crescut
+        if self.heart_rate > 100:
+            effort_score += 0.3
+
+        #hidratatre slaba
+        if self.hydration_level < 60:
+            effort_score += 0.3
+
+        #acuratete scazuta
+        if self.execution_accuracy is not None and self.execution_accuracy < 70:
+            effort_score += 0.3
+
+        #expresii faciale pt oboseala
+        facial_fatigue = self.estimate_facial_fatigue(face_landmarks) if face_landmarks else 0
+        facial_penalty = min(facial_fatigue * 0.4, 0.5)
+
+        total_penalty = min(effort_score + facial_penalty, 1.5)
+        self.energy_level -= total_penalty
+
         self.last_energy_update = current_time
+        #avand 0-100%
+        self.energy_level = max(0, min(100, self.energy_level))
 
         return self.energy_level
 
@@ -618,7 +670,7 @@ class ParameterCalculator:
         temp = self.get_face_temperature()
         bpm = self.heart_rate
         hydration = 100 - abs(36.8 - temp)*20 - abs(80 - bpm)*0.3
-        return round(max(30, min(100, hydration)), 1)  # ⬅️ adaugă această limitare
+        return round(max(30, min(100, hydration)), 1)  
 
 
     def calculate_parameters(self, frame=None, results_pose=None, results_face=None):
@@ -645,7 +697,7 @@ class ParameterCalculator:
 
                     self.last_bpm = bpm
                     self.heart_rate = round(bpm, 2)
-                    print(f"🔄 BPM actualizat: {self.heart_rate:.2f}")
+                    print(f" BPM actualizat: {self.heart_rate:.2f}")
 
             self.start_time = current_time
 
@@ -672,21 +724,21 @@ class ParameterCalculator:
                 duration_minutes = dt / 60
                 self.total_calories += MET * self.user_weight * duration_minutes
 
-            print(f"🔥 Calorii arse: {self.total_calories:.2f} kcal")
+            print(f"Calorii arse: {self.total_calories:.2f} kcal")
 
-        # 🔥 Estimare VO₂ Max
+        
         vo2_max = self.calculate_vo2_max()
 
-        # ✅ Estimăm energia inițială doar după câteva secunde pentru acuratețe
+        #energia init
         if self.energy_level is None:
             if not hasattr(self, "energy_init_time"):
                 self.energy_init_time = time.time()
             elif time.time() - self.energy_init_time > 3:
                 self.energy_level = self.estimate_initial_energy()
 
-        # ✅ Actualizare energie continuă doar dacă avem VO2 valid
+        #actualizare energie continua doar daca VO2 valid
         if vo2_max is not None and self.energy_level is not None:
-            energy_level = self.calculate_energy_level()
+            energy_level = energy_level = self.calculate_energy_level(face_landmarks=results_face.multi_face_landmarks[0] if results_face and results_face.multi_face_landmarks else None)
         else:
             energy_level = "N/A"
 
@@ -696,27 +748,38 @@ class ParameterCalculator:
             "spo2": round(self.spo2, 2) if hasattr(self, 'spo2') else 98,
             "energy_level": energy_level,
             "execution_accuracy": round(self.execution_accuracy, 2),
-            "hydration_level": self.last_hydration_score,
+            #"hydration_level": self.last_hydration_level,
+            "hydration_level": round(self.hydration_level, 1),
             "vo2_max": vo2_max
         }
 
 
     def estimate_met(self, movement_intensity, bpm):
-        """Ajustează MET în funcție de intensitatea mișcării și ritmul cardiac."""
+        #alege MET in functie de intensitate & bpm
+        #repaus
         if bpm < 80 and movement_intensity < 0.3:
-            return 1.2  # Stare de repaus
+            return 1.2 
+            #usoara 
         elif bpm < 100 and movement_intensity < 0.7:
-            return 3.8  # Mișcare ușoară
+            return 3.8
+            #mediu  
         elif bpm < 130 and movement_intensity < 1.5:
-            return 5.6  # Exercițiu moderat
+            return 5.6
+            #intens
         elif bpm < 160 and movement_intensity < 2.5:
-            return 8.2  # Exercițiu intens
+            return 8.2
         else:
-            return 10.0  # Efort maxim
+            #maxim
+            return 10.0  
 
+
+    # def stop_camera(self):
+    #     self.camera_running = False
 
     def stop_camera(self):
         self.camera_running = False
+        if self.camera_cap and self.camera_cap.isOpened():
+            self.camera_cap.release()
 
     def update_camera_frame(self, frame):
         #update frame
@@ -727,16 +790,16 @@ class ParameterCalculator:
             return None 
 
         joint_pairs = [
-            (11, 13, 15),  # Cot stâng
-            (12, 14, 16),  # Cot drept
-            (13, 11, 23),  # Umăr stâng
-            (14, 12, 24),  # Umăr drept
-            (23, 25, 27),  # Genunchi stâng
-            (24, 26, 28),  # Genunchi drept
-            (11, 23, 25),  # Șold stâng
-            (12, 24, 26),  # Șold drept
-            (23, 11, 13),  # Trunchi față de braț stâng
-            (24, 12, 14),  # Trunchi față de braț drept
+            (11, 13, 15),  #cot stang
+            (12, 14, 16),  #cot drept
+            (13, 11, 23),  #umar stang
+            (14, 12, 24),  #umar drept
+            (23, 25, 27),  #genunchi stang
+            (24, 26, 28),  #genunchi drept
+            (11, 23, 25),  #sold stang
+            (12, 24, 26),  #sold drept
+            (23, 11, 13),  #trunchi fata de brat stang
+            (24, 12, 14),  #trunchi fata de brat drept
         ]
 
         total_diff = 0
